@@ -1,0 +1,23 @@
+.env
+.venv
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Data and logs
+data/raw/*.jsonl
+data/processed/*.jsonl
+data/failed/*.jsonl
+logs/*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
