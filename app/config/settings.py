@@ -15,6 +15,27 @@ class RSSSourceConfig(BaseSettings):
     enabled: bool = True
 
 
+class NLPModelConfig(BaseSettings):
+    model_config = SettingsConfigDict(extra="ignore")
+
+    sentiment_model_name: str = Field(
+        default="cardiffnlp/twitter-roberta-base-sentiment-latest",
+        alias="SENTIMENT_MODEL_NAME",
+    )
+    ner_model_name: str = Field(
+        default="en_core_web_sm",
+        alias="NER_MODEL_NAME",
+    )
+    emotion_model_name: str = Field(
+        default="j-hartmann/emotion-english-distilroberta-base",
+        alias="EMOTION_MODEL_NAME",
+    )
+    concern_model_name: str = Field(
+        default="facebook/bart-large-mnli",
+        alias="CONCERN_MODEL_NAME",
+    )
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -34,6 +55,9 @@ class Settings(BaseSettings):
     processed_data_dir: Path = Field(default=Path("data/processed"), alias="PROCESSED_DATA_DIR")
     failed_data_dir: Path = Field(default=Path("data/failed"), alias="FAILED_DATA_DIR")
     log_dir: Path = Field(default=Path("logs"), alias="LOG_DIR")
+
+    # NLP Model Configuration
+    nlp_models: NLPModelConfig = Field(default_factory=NLPModelConfig)
 
     @property
     def rss_sources(self) -> list[RSSSourceConfig]:
