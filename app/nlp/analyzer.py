@@ -20,6 +20,8 @@ from app.storage.jsonl_store import JSONLStore
 
 logger = logging.getLogger(__name__)
 
+ANALYSIS_VERSION = "phase2-v2"
+
 
 class DocumentAnalyzer:
     def __init__(
@@ -67,7 +69,7 @@ class DocumentAnalyzer:
             sentiment=sentiment,
             emotions=emotions,
             concerns=concerns,
-            analysis_version="phase2-v1",
+            analysis_version=ANALYSIS_VERSION,
             models=self._models_metadata,
         )
 
@@ -124,10 +126,10 @@ class AnalysisPipeline:
             logger.error("Failed to save failure record: %s", e)
 
     def process_document(self, document: CanonicalDocument, force: bool = False) -> tuple[Optional[AnalyzedDocument], Optional[NLPAnalysisFailure]]:
-        analysis_key = f"{document.document_id}:phase2-v1"
+        analysis_key = f"{document.document_id}:{ANALYSIS_VERSION}"
 
         if not force and analysis_key in self._existing_analyses:
-            logger.debug("Document %s already analyzed, skipping", document.document_id)
+            logger.debug("Document %s already analyzed with %s, skipping", document.document_id, ANALYSIS_VERSION)
             return None, None
 
         try:
@@ -178,7 +180,7 @@ class AnalysisPipeline:
                 "skipped": 0,
             }
 
-        logger.info("Starting analysis pipeline")
+        logger.info("Starting analysis pipeline v%s", ANALYSIS_VERSION)
         logger.info("Input: %s", self.input_path)
         logger.info("Output: %s", self.output_path)
         logger.info("Failures: %s", self.failure_path)

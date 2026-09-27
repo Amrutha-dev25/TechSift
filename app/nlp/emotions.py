@@ -10,6 +10,16 @@ from app.nlp.taxonomy import EmotionLabel
 
 logger = logging.getLogger(__name__)
 
+MODEL_LABEL_TO_EMOTION = {
+    "anger": EmotionLabel.ANGER,
+    "fear": EmotionLabel.FEAR,
+    "joy": EmotionLabel.EXCITEMENT,
+    "sadness": EmotionLabel.DISAPPOINTMENT,
+    "surprise": EmotionLabel.CONFUSION,
+    "neutral": EmotionLabel.NEUTRAL,
+    "disgust": EmotionLabel.FRUSTRATION,
+}
+
 
 class EmotionAnalyzer:
     def __init__(
@@ -35,6 +45,7 @@ class EmotionAnalyzer:
                 tokenizer=self.model_name,
                 device=0 if self.device == "cuda" else -1,
                 return_all_scores=True,
+                top_k=None,
             )
             self._is_loaded = True
             logger.info("Emotion model loaded successfully")
@@ -53,38 +64,34 @@ class EmotionAnalyzer:
             results = self._pipeline(truncated_text)
 
             emotions = []
-            if results and isinstance(results[0], dict):
-                results = [results]
-                
-            for result in results[0]:
-                label_str = result["label"].lower()
-                score = result["score"]
+            if results and isinstance(results[0], list):
+                for result in results[0]:
+                    label_str = result["label"].lower()
+                    score = result["score"]
 
-                if score < threshold:
-                    continue
-
-                try:
-                    emotion_label = EmotionLabel(label_str)
-                except ValueError:
-                    if "anger" in label_str:
-                        emotion_label = EmotionLabel.ANGER
-                    elif "fear" in label_str:
-                        emotion_label = EmotionLabel.FEAR
-                    elif "sadness" in label_str or "disappointment" in label_str:
-                        emotion_label = EmotionLabel.DISAPPOINTMENT
-                    elif "joy" in label_str or "happy" in label_str or "excitement" in label_str:
-                        emotion_label = EmotionLabel.EXCITEMENT
-                    elif "surprise" in label_str:
-                        emotion_label = EmotionLabel.CONFUSION
-                    elif "neutral" in label_str:
-                        emotion_label = EmotionLabel.NEUTRAL
-                    else:
+                    if score < threshold:
                         continue
 
-                emotions.append(EmotionResult(label=emotion_label, confidence=score))
+                    emotion_label = MODEL_LABEL_TO_EMOTION.get(label_str)
+                    if emotion_label is None:
+                        logger.warning("Unknown emotion label from model: %s", label_str)
+                        continue
+
+                    emotions.append(EmotionResult(label=emotion_label, confidence=score))
 
             if not emotions:
-                emotions.append(EmotionResult(label=EmotionLabel.NEUTRAL, confidence=1.0))
+                logger.debug("No emotions above threshold %.2f, returning highest scoring", threshold)
+                if results and isinstance(results[0], list):
+                    best = max(results[0], key=lambda x: x["score"])
+                    label_str = best["label"].lower()
+                    score = best["score"]
+                    emotion_label = MODEL_LABEL_TO_EMOTION.get(label_str)
+                    if emotion_label:
+                        emotions.append(EmotionResult(label=emotion_label, confidence=score))
+                    else:
+                        emotions.append(EmotionResult(label=EmotionLabel.NEUTRAL, confidence=score))
+                else:
+                    emotions.append(EmotionResult(label=EmotionLabel.NEUTRAL, confidence=1.0))
 
             emotions.sort(key=lambda x: x.confidence, reverse=True)
             return emotions

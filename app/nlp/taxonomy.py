@@ -108,16 +108,22 @@ CONCERN_KEYWORDS: dict[ConcernCategory, list[str]] = {
         "privacy", "personal data", "user data", "data privacy", "surveillance",
         "tracking", "monitoring", "data collection", "personal information",
         "sensitive information", "data protection", "gdpr", "consent",
+        "people's data", "user information", "private data", "data leak",
+        "data exposure", "expose data", "exposing data", "data breach",
     ],
     ConcernCategory.SECURITY: [
         "security", "vulnerability", "exploit", "breach", "hack", "attack",
         "malware", "ransomware", "cybersecurity", "threat", "insecure",
         "unauthorized access", "penetration", "compromise",
+        "unauthorized", "agent swarm", "swarm", "intrusion", "infiltration",
+        "exposing", "expose", "spill", "leak", "unsecured", "not secured",
     ],
     ConcernCategory.DATA_COLLECTION: [
         "data collection", "data gathering", "telemetry", "analytics",
         "usage data", "behavioral data", "harvesting", "scraping",
         "data harvesting", "mass collection",
+        "collecting data", "collects data", "data collected", "user data",
+        "personal data", "people's data", "data exposure", "exposing data",
     ],
     ConcernCategory.COPYRIGHT: [
         "copyright", "intellectual property", "ip infringement", "plagiarism",

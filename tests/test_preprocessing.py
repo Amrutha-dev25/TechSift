@@ -16,7 +16,7 @@ from app.nlp.taxonomy import EntityType
 class TestPrepareTextForAnalysis:
     def test_both_title_and_content(self):
         result = prepare_text_for_analysis("Title here", "Content here")
-        assert result == "Title here\n\nContent here"
+        assert result == "Title here Content here"
 
     def test_only_title(self):
         result = prepare_text_for_analysis("Title only", "")
@@ -32,7 +32,7 @@ class TestPrepareTextForAnalysis:
 
     def test_whitespace_handling(self):
         result = prepare_text_for_analysis("  Title  ", "  Content  ")
-        assert result == "Title\n\nContent"
+        assert result == "Title Content"
 
 
 class TestTruncateText:

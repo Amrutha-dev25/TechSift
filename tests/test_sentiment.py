@@ -21,18 +21,18 @@ class TestSentimentAnalyzer:
             analyzer = SentimentAnalyzer(model_name="test-model")
             analyzer._is_loaded = True
             analyzer._pipeline = mock_pipeline
-            analyzer._label_mapping = {
-                0: SentimentLabel.NEGATIVE,
-                1: SentimentLabel.NEUTRAL,
-                2: SentimentLabel.POSITIVE,
+            analyzer._label_to_sentiment = {
+                "positive": SentimentLabel.POSITIVE,
+                "neutral": SentimentLabel.NEUTRAL,
+                "negative": SentimentLabel.NEGATIVE,
             }
             return analyzer
 
     def test_analyze_positive(self, analyzer, mock_pipeline):
         mock_pipeline.return_value = [[
-            {"label": "LABEL_2", "score": 0.8},
-            {"label": "LABEL_1", "score": 0.1},
-            {"label": "LABEL_0", "score": 0.1},
+            {"label": "positive", "score": 0.8},
+            {"label": "neutral", "score": 0.1},
+            {"label": "negative", "score": 0.1},
         ]]
 
         result = analyzer.analyze("This is amazing!")
@@ -42,9 +42,9 @@ class TestSentimentAnalyzer:
 
     def test_analyze_negative(self, analyzer, mock_pipeline):
         mock_pipeline.return_value = [[
-            {"label": "LABEL_0", "score": 0.85},
-            {"label": "LABEL_1", "score": 0.1},
-            {"label": "LABEL_2", "score": 0.05},
+            {"label": "negative", "score": 0.85},
+            {"label": "neutral", "score": 0.1},
+            {"label": "positive", "score": 0.05},
         ]]
 
         result = analyzer.analyze("This is terrible!")
@@ -54,14 +54,14 @@ class TestSentimentAnalyzer:
 
     def test_analyze_neutral(self, analyzer, mock_pipeline):
         mock_pipeline.return_value = [[
-            {"label": "LABEL_1", "score": 0.7},
-            {"label": "LABEL_0", "score": 0.15},
-            {"label": "LABEL_2", "score": 0.15},
+            {"label": "neutral", "score": 0.7},
+            {"label": "positive", "score": 0.15},
+            {"label": "negative", "score": 0.15},
         ]]
 
         result = analyzer.analyze("The company released an update.")
         assert result.label == SentimentLabel.NEUTRAL
-        assert result.score == 0.0
+        assert result.score == pytest.approx(0.0)
         assert result.confidence == 0.7
 
     def test_empty_text(self, analyzer):
@@ -76,9 +76,9 @@ class TestSentimentAnalyzer:
 
     def test_truncates_long_text(self, analyzer, mock_pipeline):
         mock_pipeline.return_value = [[
-            {"label": "LABEL_2", "score": 0.9},
-            {"label": "LABEL_1", "score": 0.05},
-            {"label": "LABEL_0", "score": 0.05},
+            {"label": "positive", "score": 0.9},
+            {"label": "neutral", "score": 0.05},
+            {"label": "negative", "score": 0.05},
         ]]
 
         long_text = "x" * 10000

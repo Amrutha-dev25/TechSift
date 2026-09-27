@@ -10,7 +10,7 @@ def prepare_text_for_analysis(title: str, content: str) -> str:
         parts.append(title.strip())
     if content and content.strip():
         parts.append(content.strip())
-    return "\n\n".join(parts)
+    return " ".join(parts)
 
 
 def truncate_text(text: str, max_length: int = 4096) -> str:
@@ -43,13 +43,19 @@ def split_into_chunks(text: str, max_chunk_size: int = 512, overlap: int = 50) -
 
 def extract_evidence_span(text: str, keywords: list[str], window: int = 100) -> Optional[str]:
     text_lower = text.lower()
+    best_match = None
+    best_idx = -1
     for keyword in keywords:
         keyword_lower = keyword.lower()
         idx = text_lower.find(keyword_lower)
-        if idx != -1:
-            start = max(0, idx - window)
-            end = min(len(text), idx + len(keyword) + window)
-            return text[start:end].strip()
+        if idx != -1 and (best_idx == -1 or idx < best_idx):
+            best_idx = idx
+            best_match = keyword
+    if best_match is not None:
+        idx = text_lower.find(best_match.lower())
+        start = max(0, idx - window)
+        end = min(len(text), idx + len(best_match) + window)
+        return text[start:end].strip()
     return None
 
 
@@ -90,6 +96,12 @@ def canonicalize_tech_entity(text: str) -> Optional[str]:
         "aws": "AWS",
         "azure": "Azure",
         "nvidia": "NVIDIA",
+        "supabase": "Supabase",
+        "muse": "Muse",
+        "recursive intelligence": "Recursive Intelligence",
+        "techcrunch": "TechCrunch",
+        "techcrunch disrupt": "TechCrunch Disrupt",
+        "lightspeed": "Lightspeed Venture Partners",
     }
 
     normalized = normalize_entity_text(text).lower()

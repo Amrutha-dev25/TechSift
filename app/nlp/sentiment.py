@@ -22,7 +22,7 @@ class SentimentAnalyzer:
         self._pipeline: Optional[pipeline] = None
         self._tokenizer: Optional[AutoTokenizer] = None
         self._model: Optional[AutoModelForSequenceClassification] = None
-        self._label_mapping: dict[int, SentimentLabel] = {}
+        self._label_to_sentiment: dict[str, SentimentLabel] = {}
         self._is_loaded = False
 
     def _load_model(self) -> None:
@@ -43,25 +43,23 @@ class SentimentAnalyzer:
                 tokenizer=self._tokenizer,
                 device=0 if self.device == "cuda" else -1,
                 return_all_scores=True,
+                top_k=None,
             )
 
             config = self._model.config
             if hasattr(config, "id2label") and config.id2label:
                 for idx, label in config.id2label.items():
                     label_lower = label.lower()
-                    if "positive" in label_lower or label_lower == "pos":
-                        self._label_mapping[idx] = SentimentLabel.POSITIVE
-                    elif "negative" in label_lower or label_lower == "neg":
-                        self._label_mapping[idx] = SentimentLabel.NEGATIVE
+                    if label_lower == "positive":
+                        self._label_to_sentiment[label_lower] = SentimentLabel.POSITIVE
+                    elif label_lower == "negative":
+                        self._label_to_sentiment[label_lower] = SentimentLabel.NEGATIVE
+                    elif label_lower == "neutral":
+                        self._label_to_sentiment[label_lower] = SentimentLabel.NEUTRAL
                     else:
-                        self._label_mapping[idx] = SentimentLabel.NEUTRAL
-            else:
-                self._label_mapping = {
-                    0: SentimentLabel.NEGATIVE,
-                    1: SentimentLabel.NEUTRAL,
-                    2: SentimentLabel.POSITIVE,
-                }
+                        logger.warning("Unknown sentiment label from model config: %s", label)
 
+            logger.info("Sentiment label mapping: %s", self._label_to_sentiment)
             self._is_loaded = True
             logger.info("Sentiment model loaded successfully")
 
@@ -82,20 +80,25 @@ class SentimentAnalyzer:
         try:
             truncated_text = text[:4096]
             results = self._pipeline(truncated_text)
-            
-            scores = {}
-            if results and isinstance(results[0], dict):
-                results = [results]
-                
-            for result in results[0]:
-                label_idx = int(result["label"].split("_")[-1]) if "_" in result["label"] else 0
-                if "label" in result and result["label"].isdigit():
-                    label_idx = int(result["label"])
-                elif "label" in result and "LABEL_" in result["label"]:
-                    label_idx = int(result["label"].replace("LABEL_", ""))
 
-                label = self._label_mapping.get(label_idx, SentimentLabel.NEUTRAL)
-                scores[label] = result["score"]
+            scores = {}
+            if results and isinstance(results[0], list):
+                for result in results[0]:
+                    label_str = result["label"].lower()
+                    score = result["score"]
+                    sentiment_label = self._label_to_sentiment.get(label_str)
+                    if sentiment_label:
+                        scores[sentiment_label] = score
+                    else:
+                        logger.warning("Unknown sentiment label from pipeline: %s", label_str)
+
+            if not scores:
+                logger.warning("No valid sentiment scores extracted, returning neutral")
+                return SentimentResult(
+                    label=SentimentLabel.NEUTRAL,
+                    score=0.0,
+                    confidence=0.0,
+                )
 
             positive_prob = scores.get(SentimentLabel.POSITIVE, 0.0)
             negative_prob = scores.get(SentimentLabel.NEGATIVE, 0.0)
@@ -103,8 +106,8 @@ class SentimentAnalyzer:
 
             sentiment_score = positive_prob - negative_prob
 
-            max_label = max(scores, key=scores.get) if scores else SentimentLabel.NEUTRAL
-            confidence = scores.get(max_label, 0.0)
+            max_label = max(scores, key=scores.get)
+            confidence = scores[max_label]
 
             return SentimentResult(
                 label=max_label,

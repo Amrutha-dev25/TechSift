@@ -36,6 +36,15 @@ SPACY_LABEL_MAP = {
     "CARDINAL": EntityType.OTHER,
 }
 
+NOISY_ENTITY_LABELS = {
+    "DATE", "TIME", "PERCENT", "MONEY", "QUANTITY", "ORDINAL", "CARDINAL"
+}
+
+NOISY_ENTITY_TEXTS = {
+    "ml", "llm", "api", "sdk", "ui", "ux", "os", "db", "http", "https",
+    "www", "com", "org", "net", "io", "co", "inc", "ltd", "llc", "corp",
+}
+
 
 class EntityExtractor:
     def __init__(
@@ -70,6 +79,16 @@ class EntityExtractor:
             logger.error("Failed to load NER model: %s", e)
             raise
 
+    def _is_noisy_entity(self, text: str, label: str) -> bool:
+        normalized = normalize_entity_text(text).lower()
+        if label in NOISY_ENTITY_LABELS:
+            return True
+        if normalized in NOISY_ENTITY_TEXTS:
+            return True
+        if len(normalized) < 2:
+            return True
+        return False
+
     def extract(self, text: str) -> list[Entity]:
         if not text or not text.strip():
             return []
@@ -80,19 +99,19 @@ class EntityExtractor:
             doc: Doc = self._nlp(text[:100000])
 
             entities = []
-            seen_spans = set()
+            seen_texts = set()
 
             for ent in doc.ents:
-                span_key = (ent.start_char, ent.end_char)
-                if span_key in seen_spans:
+                if self._is_noisy_entity(ent.text, ent.label_):
                     continue
-                seen_spans.add(span_key)
 
                 entity_type = SPACY_LABEL_MAP.get(ent.label_, EntityType.OTHER)
                 normalized_text = normalize_entity_text(ent.text)
 
-                if len(normalized_text) < 2:
+                text_key = normalized_text.lower()
+                if text_key in seen_texts:
                     continue
+                seen_texts.add(text_key)
 
                 canonical = canonicalize_tech_entity(normalized_text)
 
@@ -113,8 +132,14 @@ class EntityExtractor:
 
     def extract_technology_entities(self, entities: list[Entity]) -> list[Entity]:
         tech_entities = []
+        seen_texts = set()
         for entity in entities:
             if is_technology_entity(entity.text, entity.entity_type):
+                text_key = entity.text.lower()
+                if text_key in seen_texts:
+                    continue
+                seen_texts.add(text_key)
+                # Prefer PRODUCT/TECHNOLOGY type over ORG/OTHER for tech entities
                 tech_entities.append(entity)
         return tech_entities
 

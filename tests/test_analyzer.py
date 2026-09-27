@@ -95,7 +95,7 @@ class TestDocumentAnalyzer:
         assert analysis.emotions[0].label == EmotionLabel.CONCERN
         assert len(analysis.concerns) == 1
         assert analysis.concerns[0].category == ConcernCategory.PRIVACY
-        assert analysis.analysis_version == "phase2-v1"
+        assert analysis.analysis_version == "phase2-v2"
         assert analysis.models is not None
 
     def test_analyze_calls_all_components(self, analyzer, sample_document, mock_analyzers):
