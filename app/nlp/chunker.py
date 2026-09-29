@@ -15,13 +15,18 @@ try:
         if _nlp is None:
             try:
                 _nlp = spacy.load(_nlp_name, disable=["parser", "tagger", "ner"])
+                # Add sentencizer if not present
+                if "sentencizer" not in [pipe for pipe in _nlp.pipe_names]:
+                    _nlp.add_pipe("sentencizer")
             except Exception:
                 _nlp = spacy.blank("en")
+                if "sentencizer" not in [pipe for pipe in _nlp.pipe_names]:
+                    _nlp.add_pipe("sentencizer")
         return _nlp
 
 except ImportError:
 
-    def _get_nlp:  # type: ignore
+    def _get_nlp():  # type: ignore
         return None
 
 

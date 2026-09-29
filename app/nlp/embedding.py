@@ -24,7 +24,13 @@ class EmbeddingModel:
 
         logger.info("Loading embedding model: %s", model_name)
         self._model = SentenceTransformer(model_name, device=self.device)
-        self.dimension = self._model.get_sentence_embedding_dimension()
+
+        # Get embedding dimension (model API changed versions)
+        try:
+            self.dimension = self._model.get_sentence_embedding_dimension()
+        except AttributeError:
+            self.dimension = self._model.get_embedding_dimension()
+
         logger.info("Embedding model loaded - dimension: %d", self.dimension)
 
     def embed(self, texts: List[str]) -> List[List[float]]:
