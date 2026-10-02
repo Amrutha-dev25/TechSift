@@ -82,12 +82,14 @@ class RetrievalOrchestrator:
         }
         mode = mode_map.get(retrieval_mode.lower(), RetrievalMode.BALANCED)
 
+        # Set mode in filters if specified
+        filters.mode = mode
+
         # Retrieve from Phase 3 retriever
         results = self.retriever.search(
             query=normalized_query,
             top_k=top_k,
             filters=filters,
-            mode=mode,
         )
 
         # Convert to Evidence objects

@@ -1,9 +1,18 @@
 from __future__ import annotations
 
 from datetime import datetime
+from enum import Enum
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
+
+
+class RetrievalMode(str, Enum):
+    """Retrieval strategy modes."""
+
+    BALANCED = "balanced"
+    CONCERN = "concern"
+    HYPE = "hype"
 
 
 class RetrievalResult(BaseModel):
@@ -74,11 +83,19 @@ class RetrievalFilters(BaseModel):
         default=None,
         description="Filter by technology entity name",
     )
+    technology_contains: Optional[str] = Field(
+        default=None,
+        description="Filter by technology entity name (alias)",
+    )
 
     # Concern filter
     concern: Optional[str] = Field(
         default=None,
         description="Filter by concern category",
+    )
+    concern_category: Optional[str] = Field(
+        default=None,
+        description="Filter by concern category (alias)",
     )
 
     # Source filters
@@ -100,9 +117,17 @@ class RetrievalFilters(BaseModel):
         default=None,
         description="Filter documents published before this timestamp",
     )
+    date_from: Optional[datetime] = Field(
+        default=None,
+        description="Filter documents published after this timestamp (alias)",
+    )
+    date_to: Optional[datetime] = Field(
+        default=None,
+        description="Filter documents published before this timestamp (alias)",
+    )
 
     # Mode filters
-    mode: Optional[str] = Field(
+    mode: Optional[RetrievalMode] = Field(
         default=None,
         description="Retrieval mode: balanced, concern, hype",
     )
@@ -126,6 +151,18 @@ class RetrievalFilters(BaseModel):
 
         Raises ValueError if constraints are invalid.
         """
+        # Use aliases
+        if self.date_from and not self.published_after:
+            self.published_after = self.date_from
+        if self.date_to and not self.published_before:
+            self.published_before = self.date_to
+        if self.technology_contains and not self.technology:
+            self.technology = self.technology_contains
+        if self.concern_category and not self.concern:
+            self.concern = self.concern_category
+        if self.min_sentiment_score is not None and not hasattr(self, "_min"):
+            pass  # normalize if needed
+
         # Validate date range
         if self.published_after and self.published_before:
             if self.published_after > self.published_before:
