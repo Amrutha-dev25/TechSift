@@ -414,6 +414,85 @@ technology-reaction-intelligence/
 
 ---
 
+## Phase 3 — Semantic Knowledge Base & Retrieval
+
+Phase 3 builds a persistent vector index from Phase 2 analyzed documents and provides semantic search with metadata filtering.
+
+### Architecture
+
+```
+Phase 2 analyzed_documents.jsonl
+        ↓
+   Document Loader
+        ↓
+   Chunking Engine (500 tokens, 75 overlap, sentence boundaries)
+        ↓
+   Embedding Generator (sentence-transformers/all-MiniLM-L6-v2)
+        ↓
+   ChromaDB (persistent, cosine distance)
+        ↓
+   Retriever (semantic search + metadata filters + diversity)
+        ↓
+   Structured RetrievalResult
+```
+
+### Features
+
+- **Deterministic chunking**: 500-token chunks with 75-token overlap, sentence-aware boundaries, deterministic chunk IDs (`doc:chunk:000`)
+- **Configurable embedding model**: `sentence-transformers/all-MiniLM-L6-v2` (384-dim), loaded once, batch-encoded
+- **Persistent ChromaDB**: Collection `technology_reaction_documents`, cosine distance, survives restarts
+- **Semantic search**: Natural language queries embedded with same model as documents
+- **Metadata filtering**: Sentiment (label + score range), technology entities, concern categories, source type/name, date range
+- **Result diversity**: `MAX_CHUNKS_PER_DOCUMENT=2` prevents single-document dominance
+- **Incremental indexing**: Re-run skips existing chunks via deterministic IDs
+- **Force reindex**: `--force` recreates collection from scratch
+
+### Retrieval Result Schema
+
+Each `RetrievalResult` contains:
+
+```python
+chunk_id, document_id, text, score (similarity 0-1)
+title, source_name, source_type, url, published_at
+sentiment_label, sentiment_score
+technology_entities[], concerns[], emotions[]
+```
+
+### Configuration (.env)
+
+```bash
+EMBEDDING_MODEL_NAME=sentence-transformers/all-MiniLM-L6-v2
+EMBEDDING_BATCH_SIZE=32
+CHROMA_PERSIST_DIRECTORY=./chroma_db
+CHROMA_COLLECTION_NAME=technology_reaction_documents
+CHROMA_DISTANCE_METRIC=cosine
+DEFAULT_TOP_K=10
+MAX_CHUNKS_PER_DOCUMENT=2
+MAX_QUERY_LENGTH=2000
+```
+
+### Phase 3 Verification Commands
+
+```bash
+# Index Phase 2 documents
+python scripts\index_documents.py
+
+# Force recreate
+python scripts\index_documents.py --force
+
+# Search
+python scripts\search.py "Why are developers concerned about AI coding assistants?"
+python scripts\search.py "AI" --sentiment negative --concern security
+python scripts\search.py "OpenAI" --technology "OpenAI"
+
+# Statistics
+python -c "from app.vectorstore.chroma_store import ChromaVectorStore; print(ChromaVectorStore().get_stats())"
+```
+
+After second indexing run, verify no duplicate chunks are created (0 new, all skipped).
+
+---
+
 ## Limitations
 
 - **Document-level analysis**: Analyzes language in collected documents, not population opinions. Does NOT establish "X% of developers believe..." or "the public is angry..."

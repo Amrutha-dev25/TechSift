@@ -8,6 +8,7 @@ import logging
 import os
 from pathlib import Path
 from typing import List
+from datetime import datetime
 
 from app.nlp.chunker import chunk_text
 from app.nlp.embedding import EmbeddingModel
@@ -142,6 +143,23 @@ def index_documents(
             title = doc.get("title") or ""
             content = doc.get("content") or ""
 
+            # Parse published timestamp from analysis or document
+            published_at = analysis.get("published_at") or doc.get("published_at")
+            published_timestamp = None
+            if published_at:
+                try:
+                    if isinstance(published_at, str):
+                        # Try ISO format
+                        if "T" in published_at:
+                            published_timestamp = int(datetime.fromisoformat(published_at.replace("Z", "+00:00")).timestamp())
+                        else:
+                            # Try as Unix timestamp string
+                            published_timestamp = int(float(published_at))
+                    elif isinstance(published_at, (int, float)):
+                        published_timestamp = int(published_at)
+                except Exception:
+                    published_timestamp = None
+
             # Build text from available Phase 2 fields
             text_parts = []
             if title:
@@ -203,8 +221,8 @@ def index_documents(
                     "source_name": analysis.get("source_name"),
                     "source_type": analysis.get("source_type"),
                     "url": analysis.get("url"),
-                    # Publication timestamp
-                    "published_timestamp": analysis.get("published_at"),
+                    # Publication timestamp - convert ISO string to Unix timestamp
+                    "published_timestamp": published_timestamp,
                     # Analysis version
                     "analysis_version": analysis.get("analysis_version", "phase2-v2"),
                 }
