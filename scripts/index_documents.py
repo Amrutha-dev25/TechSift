@@ -206,6 +206,8 @@ def index_documents(
                     "chunk_id": chunk_id,
                     "chunk_index": chunk_index,
                     "text": chunk["text"],
+                    # Document-level metadata (title/source live at doc level)
+                    "title": title,
                     # Phase 2 sentiment metadata
                     "sentiment_label": analysis.get("sentiment", {}).get("label"),
                     "sentiment_score": analysis.get("sentiment", {}).get("score"),
@@ -216,11 +218,11 @@ def index_documents(
                     "concerns": analysis.get("concerns", []) or [],
                     # Emotions from Phase 2 (top 3)
                     "emotions": (analysis.get("emotions", []) or [])[:3],
-                    # Source metadata
-                    "source_id": analysis.get("source_id"),
-                    "source_name": analysis.get("source_name"),
-                    "source_type": analysis.get("source_type"),
-                    "url": analysis.get("url"),
+                    # Source metadata (document level, not inside analysis)
+                    "source_id": doc.get("source_id"),
+                    "source_name": doc.get("source_name"),
+                    "source_type": doc.get("source_type"),
+                    "url": doc.get("url"),
                     # Publication timestamp - convert ISO string to Unix timestamp
                     "published_timestamp": published_timestamp,
                     # Analysis version
@@ -256,13 +258,12 @@ def index_documents(
                     "stage": "indexing",
                     "error_type": type(e).__name__,
                     "error_message": str(e),
-                    "timestamp": __import__("datetime").datetime.now().isoformat(),
+                    "timestamp": datetime.now().isoformat(),
                 }
             )
 
     # Write failed records
     if failed_records:
-        from datetime import datetime
         failed_path = Path("data/failed/vector_index_failures.jsonl")
         failed_path.parent.mkdir(parents=True, exist_ok=True)
         with open(failed_path, "a", encoding="utf-8") as f:

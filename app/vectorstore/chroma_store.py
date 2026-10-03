@@ -150,6 +150,8 @@ class ChromaVectorStore:
                 )
 
             # Source metadata
+            if chunk.get("title"):
+                metadata["title"] = str(chunk["title"])
             if chunk.get("source_id"):
                 metadata["source_id"] = str(chunk["source_id"])
             if chunk.get("source_name"):
@@ -275,6 +277,18 @@ class ChromaVectorStore:
             # Convert distance to similarity: similarity = 1 - distance (cosine)
             similarity = 1.0 - float(dist) if dist is not None else 0.0
 
+            # Convert published_timestamp (unix seconds) to datetime
+            published_at = meta.get("published_at")
+            if published_at is None and meta.get("published_timestamp") is not None:
+                try:
+                    from datetime import datetime as _dt, timezone as _tz
+
+                    published_at = _dt.fromtimestamp(
+                        float(meta["published_timestamp"]), tz=_tz.utc
+                    )
+                except Exception:
+                    published_at = None
+
             result = {
                 "id": meta.get("chunk_id", ""),
                 "document_id": meta.get("document_id", ""),
@@ -284,7 +298,7 @@ class ChromaVectorStore:
                 "source_name": meta.get("source_name", ""),
                 "source_type": meta.get("source_type", ""),
                 "url": meta.get("url", ""),
-                "published_at": meta.get("published_at"),
+                "published_at": published_at,
                 "sentiment_label": meta.get("sentiment_label"),
                 "sentiment_score": meta.get("sentiment_score"),
                 "technology_entities": (
