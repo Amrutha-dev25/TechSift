@@ -523,4 +523,42 @@ python scripts\analyze_documents.py
 python scripts\analyze_documents.py  # verify idempotency
 ```
 
-After the second run, verify that `data/processed/analyzed_documents.jsonl` has not grown with duplicate analyses.
+After the second run, verify that `data/processed/analyzed_documents.jsonl` has not grown with duplicate analyses.## Phase 5 — RAG Answer Generation
+
+The system accepts a user question, retrieves relevant evidence from the Phase 3 knowledge base via the Phase 4 retrieval pipeline, and generates a grounded answer using OpenAI.
+
+### Configuration
+
+Add the following to your `.env`:
+
+```text
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-4o-mini
+```
+
+The `OPENAI_API_KEY` must be set as an environment variable. The `OPENAI_MODEL` defaults to `gpt-4o-mini` if omitted.
+
+### CLI usage
+
+```bash
+python scriptssk.py "--query "Why are developers concerned about AI coding assistants?""
+```
+
+The CLI displays:
+- The generated answer
+- Source titles, URLs, and published dates
+- Evidence IDs for citation
+
+### Answer format
+
+The generated answer includes:
+- The synthesized answer text
+- Clickable source citations with title, URL, and publication date
+- A statement if evidence was insufficient
+
+### Limitations
+
+- Answer quality depends on the OpenAI model and retrieved evidence
+- If no relevant evidence is found, the system states that explicitly
+- No conversation memory or multi-turn context is maintained across calls
+
