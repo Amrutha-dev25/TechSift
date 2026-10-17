@@ -9,7 +9,7 @@ from pathlib import Path
 project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root))
 
-from app.rag import answer_from_query
+from app.rag.answer_generator import answer_from_query
 
 
 def main() -> int:
