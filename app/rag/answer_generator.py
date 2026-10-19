@@ -3,14 +3,15 @@ from __future__ import annotations
 import os
 from typing import List, Optional
 
-from openai import OpenAI, APIError, APITimeoutError
+from google import genai
+from google.genai import types
 
 from app.rag.models import Evidence, RetrievalResponse
 from app.rag.context_builder import ContextBuilder
 
 
 class AnswerGenerator:
-    """Generates grounded answers from retrieved evidence using OpenAI.
+    """Generates grounded answers from retrieved evidence using Gemini.
 
     Rules:
     - Never invent citations or facts
@@ -20,10 +21,10 @@ class AnswerGenerator:
     """
 
     def __init__(self) -> None:
-        self._api_key = os.environ.get("OPENAI_API_KEY")
-        self._model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
-        self._client: Optional[OpenAI] = (
-            OpenAI(api_key=self._api_key) if self._api_key else None
+        self._api_key = os.environ.get("GEMINI_API_KEY")
+        self._model = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+        self._client: Optional[genai.Client] = (
+            genai.Client(api_key=self._api_key) if self._api_key else None
         )
         self._context_builder = ContextBuilder()
 
@@ -57,23 +58,14 @@ class AnswerGenerator:
         )
 
         try:
-            response = self._client.chat.completions.create(
+            response = self._client.models.generate_content(
                 model=self._model,
-                messages=[{"role": "user", "content": user_message}],
-                temperature=0.3,
+                contents=user_message,
             )
-            return response.choices[0].message.content
+            return response.text
 
-        except APITimeoutError:
-            # Timeout – don't crash; just report limitation
-            return None
-
-        except APIError:
-            # Other API error – don't crash
-            return None
-
-        except Exception:
-            # Any other unexpected error – be safe
+        except Exception as e:
+            # Catch all errors gracefully - don't crash, just return None
             return None
 
 
@@ -83,7 +75,7 @@ class AnswerGenerator:
 
 
 def _build_user_message(query: str, context: str, results: List[Evidence]) -> str:
-    """Construct the prompt for the LLM.
+    """Construct the prompt for Gemini.
 
     The LLM receives:
     1. The user's original question
@@ -117,7 +109,7 @@ def _build_user_message(query: str, context: str, results: List[Evidence]) -> st
 def answer_from_query(query: str, top_k: int = 10) -> Optional[str]:
     """End-to-end: retrieve → generate → return answer string.
 
-    Returns None if no OpenAI key, no evidence, or generation fails.
+    Returns None if no Gemini key, no evidence, or generation fails.
     """
     from app.rag import RetrievalOrchestrator
 

@@ -4,6 +4,7 @@ from app.rag.models import Evidence, RetrievalResponse
 from app.rag.query_processor import QueryProcessor
 from app.rag.context_builder import ContextBuilder
 from app.rag.retrieval_orchestrator import RetrievalOrchestrator
+from app.rag.answer_generator import answer_from_query
 
 __all__ = [
     "Evidence",
@@ -11,4 +12,5 @@ __all__ = [
     "QueryProcessor",
     "ContextBuilder",
     "RetrievalOrchestrator",
+    "answer_from_query",
 ]
